@@ -29,7 +29,7 @@ contract DeadMansSwitchTest is Test {
 
     function test_WithdrawFailsIfOwnerActive() public {
         vm.prank(beneficiary);
-        vm.expectRevert("Owner still active");
+        vm.expectRevert(DeadMansSwitch.OwnerStillActive.selector);
         dms.withdraw();
     }
 
@@ -45,7 +45,7 @@ contract DeadMansSwitchTest is Test {
 
     function test_StrangerCannotCheckIn() public {
         vm.prank(address(3));
-        vm.expectRevert("Not the owner");
+        vm.expectRevert(DeadMansSwitch.NotOwner.selector);
         dms.checkIn();
     }
 }

@@ -2,6 +2,14 @@
 pragma solidity ^0.8.20;
 
 contract DeadMansSwitch {
+    // Custom errors
+    error NotOwner();
+    error NotBeneficiary();
+    error OwnerStillActive();
+    error AlreadyWithdrawn();
+    error NoFunds();
+    error MustSendETH();
+
     address public owner;
     address payable public beneficiary;
     uint256 public lastCheckIn;
@@ -13,12 +21,12 @@ contract DeadMansSwitch {
     event FundsWithdrawn(address beneficiary, uint256 amount);
 
     modifier onlyOwner() {
-        require(msg.sender == owner, "Not the owner");
+        if (msg.sender != owner) revert NotOwner();
         _;
     }
 
     modifier onlyBeneficiary() {
-        require(msg.sender == beneficiary, "Not the beneficiary");
+        if (msg.sender != beneficiary) revert NotBeneficiary();
         _;
     }
 
@@ -30,7 +38,7 @@ contract DeadMansSwitch {
 
     // Owner deposits ETH into the contract
     function deposit() external payable onlyOwner {
-        require(msg.value > 0, "Must send ETH");
+        if (msg.value == 0) revert MustSendETH();
         emit FundsDeposited(msg.sender, msg.value);
     }
 
@@ -42,12 +50,10 @@ contract DeadMansSwitch {
 
     // Beneficiary withdraws if owner hasn't checked in
     function withdraw() external onlyBeneficiary {
-        require(
-            block.timestamp >= lastCheckIn + timeoutPeriod,
-            "Owner still active"
-        );
-        require(!triggered, "Already withdrawn");
-        require(address(this).balance > 0, "No funds");
+        if (block.timestamp < lastCheckIn + timeoutPeriod) 
+            revert OwnerStillActive();
+        if (triggered) revert AlreadyWithdrawn();
+        if (address(this).balance == 0) revert NoFunds();
 
         triggered = true;
         uint256 amount = address(this).balance;
